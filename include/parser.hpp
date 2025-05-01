@@ -39,29 +39,29 @@ private:
     return ParseError{message};
   }
 
-  auto peek() { return tokens.at(current); }
-  auto previous() { return tokens.at(current - 1); }
-  auto advance() {
+  constexpr auto peek() { return tokens.at(current); }
+  constexpr auto previous() { return tokens.at(current - 1); }
+  constexpr auto advance() {
     if (!is_at_end()) {
       current++;
     }
     return previous();
   }
 
-  auto is_at_end() -> bool { return peek().get_type() == Token::Type::EOF; }
-  auto check(Token::Type type) {
+  constexpr auto is_at_end() -> bool { return peek().get_type() == Token::Type::EOF; }
+  constexpr auto check(Token::Type type) {
     return (!is_at_end() && peek().get_type() == type);
   }
 
-  template <typename... Args> auto match(Args... types) {
+  template <typename... Args> constexpr auto match(Args... types) {
     return (... || (check(types) ? (advance(), true) : false));
   }
 
-  auto consume(Token::Type type, std::string_view message) -> Token {
+  constexpr auto consume(Token::Type type, std::string_view message) -> Token {
     return advance();
   }
 
-  auto primary() -> Expression & {
+  constexpr auto primary() -> Expression & {
     if (match(Token::Type::FALSE)) {
       auto &literal_expression =  literal_expressions.emplace_back(false);
       return literal_expression;
@@ -90,9 +90,11 @@ private:
           grouping_expressions.emplace_back(GroupingExpression{expr});
       return grouping_expression;
     }
+
+    throw error(peek(), "Expected expression.");
   }
 
-  auto unary() -> Expression & {
+  constexpr auto unary() -> Expression & {
     if (match(Token::Type::BANG, Token::Type::MINUS)) {
       auto op = previous();
       Expression &right = unary();
@@ -102,7 +104,7 @@ private:
     return primary();
   }
 
-  auto factor() -> Expression & {
+  constexpr auto factor() -> Expression & {
     Expression &expr = unary();
     while (match(Token::Type::SLASH, Token::Type::STAR)) {
       auto opr = previous();
@@ -114,7 +116,7 @@ private:
 
     return expr;
   }
-  auto term() -> Expression & {
+  constexpr auto term() -> Expression & {
     Expression &expr = factor();
     while (match(Token::Type::PLUS, Token::Type::MINUS)) {
       auto opr = previous();
@@ -126,7 +128,7 @@ private:
 
     return expr;
   }
-  auto comparison() -> Expression & {
+  constexpr auto comparison() -> Expression & {
     Expression &expr = term();
     while (match(Token::Type::GREATER, Token::Type::GREATER_EQUAL,
                  Token::Type::LESS, Token::Type::LESS_EQUAL)) {
@@ -139,7 +141,7 @@ private:
 
     return expr;
   }
-  auto equality() -> Expression & {
+  constexpr auto equality() -> Expression & {
     Expression &expr = comparison();
     while (match(Token::Type::BANG_EQUAL, Token::Type::EQUAL_EQUAL)) {
       auto opr = previous();
@@ -151,7 +153,7 @@ private:
 
     return expr;
   }
-  auto expression() -> Expression & { return equality(); }
+  constexpr auto expression() -> Expression & { return equality(); }
 
   auto synchronize() {
     static auto sync_points = std::set<Token::Type>{

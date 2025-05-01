@@ -64,10 +64,10 @@ public:
     NUM_TYPES,
   };
 
-  Token(Type type, std::string_view lexeme, TokenLiteral literal, uint32_t line)
+  constexpr Token(Type type, std::string_view lexeme, TokenLiteral literal, uint32_t line)
       : type{type}, lexeme{lexeme}, literal{literal}, line{line} {}
 
-  Token(Type type, std::string_view lexeme, uint32_t line)
+  constexpr Token(Type type, std::string_view lexeme, uint32_t line)
       : type{type}, lexeme{lexeme}, line{line} {}
 
   [[nodiscard]] auto to_string() const -> std::string;

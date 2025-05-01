@@ -22,7 +22,7 @@ class BinaryExpression : public Expression {
   Expression &right;
 
 public:
-  BinaryExpression(Expression &left, Token op, Expression &right)
+  constexpr BinaryExpression(Expression &left, Token op, Expression &right)
       : left(left), op(op), right(right) {}
 
   // auto accept(const ExpressionVisitor &visitor) const -> std::string;
@@ -32,7 +32,7 @@ class GroupingExpression : public Expression {
   Expression &expression;
 
 public:
-  explicit GroupingExpression(Expression &expression)
+  constexpr GroupingExpression(Expression &expression)
       : expression(expression) {}
 
   // auto accept(const ExpressionVisitor &visitor) const -> std::string;
@@ -42,7 +42,7 @@ class LiteralExpression : public Expression {
   TokenLiteral literal;
 
 public:
-  explicit LiteralExpression(TokenLiteral literal) : literal(literal) {}
+  constexpr LiteralExpression(TokenLiteral literal) : literal(literal) {}
 
   // auto accept(const ExpressionVisitor &visitor) const -> std::string;
 };
@@ -52,7 +52,7 @@ class UnaryExpression : public Expression {
   Expression &right;
 
 public:
-  UnaryExpression(Token op, Expression &right) : op(op), right(right) {}
+  constexpr UnaryExpression(Token op, Expression &right) : op(op), right(right) {}
 
   // auto accept(const ExpressionVisitor &visitor) const -> std::string;
 };

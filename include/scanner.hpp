@@ -36,7 +36,7 @@ private:
   auto identifier() -> void;
 
 public:
-  explicit Scanner(std::string &&filename);
+  Scanner(const std::string &source) : source(source) {}
 
   auto scan_tokens() -> std::vector<Token> &;
 

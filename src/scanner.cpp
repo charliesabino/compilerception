@@ -13,14 +13,6 @@
 
 using std::isalpha;
 
-Scanner::Scanner(std::string &&filename) : filename(std::move(filename)) {
-  std::ifstream file{filename};
-  std::stringstream buffer;
-  buffer << file.rdbuf();
-  file.close();
-
-  source = buffer.str();
-}
 
 [[nodiscard]] auto Scanner::is_at_end() const -> bool {
   return current >= source.size();

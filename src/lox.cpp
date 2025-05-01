@@ -24,7 +24,9 @@ int Lox::main(int /*argc*/, char *argv[]) {
   std::cerr << std::unitbuf;
 
   const std::string command{argv[1]};
-  Scanner scanner{std::string(argv[2])};
+
+  std::string source{""};
+  Scanner scanner{source};
 
   auto tokens = scanner.scan_tokens();
 
