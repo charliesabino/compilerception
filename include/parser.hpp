@@ -1,78 +1,79 @@
 #pragma once
 
 #include "expression.hpp"
+#include "lox.hpp"
 #include "token.hpp"
-#include <array>
 #include <expected>
+#include <memory>
+#include <set>
 #include <string_view>
+#include <utility>
+#include <variant>
 #include <vector>
 
 struct ParseError {
   std::string_view message;
-  constexpr explicit ParseError(std::string_view message) : message{message} {}
+
+  explicit ParseError(std::string_view message) : message{message} {}
 };
 
 class Parser {
 public:
-  constexpr explicit Parser(std::vector<Token> tokens) : tokens{std::move(tokens)} {}
+  explicit Parser(std::vector<Token> tokens) : tokens{std::move(tokens)} {}
 
-  constexpr auto parse() -> std::expected<AnyExpression, ParseError> {
+  auto parse() -> std::expected<std::shared_ptr<Expression>, ParseError> {
     return expression();
   }
 
 private:
   std::vector<Token> tokens;
-  size_t current{};
+  int current{};
 
-  constexpr auto peek() const -> Token {
-    return tokens.at(current);
+  static auto error(Token token, std::string_view message) {
+    Lox::error(token, message);
+    return ParseError{message};
   }
 
-  constexpr auto previous() const -> Token {
-    return tokens.at(current - 1);
-  }
-
-  constexpr auto advance() -> Token {
+  auto peek() { return tokens.at(current); }
+  auto previous() { return tokens.at(current - 1); }
+  auto advance() {
     if (!is_at_end()) {
       current++;
     }
     return previous();
   }
 
-  constexpr auto is_at_end() const -> bool {
-    return peek().get_type() == Token::Type::EOF;
+  auto is_at_end() -> bool { return peek().get_type() == Token::Type::EOF; }
+  auto check(Token::Type type) {
+    return (!is_at_end() && peek().get_type() == type);
   }
 
-  constexpr auto check(Token::Type type) const -> bool {
-    return !is_at_end() && peek().get_type() == type;
-  }
-
-  template <typename... Args>
-  constexpr auto match(Args... types) -> bool {
+  template <typename... Args> auto match(Args... types) {
     return (... || (check(types) ? (advance(), true) : false));
   }
 
-  constexpr auto consume(Token::Type type, std::string_view message)
+  auto consume(Token::Type type, std::string_view message)
       -> std::expected<Token, ParseError> {
     if (check(type)) {
       return advance();
     }
-    return std::unexpected(ParseError{message});
+
+    return std::unexpected(error(peek(), message));
   }
 
-  constexpr auto primary() -> std::expected<AnyExpression, ParseError> {
+  auto primary() -> std::expected<std::shared_ptr<Expression>, ParseError> {
     if (match(Token::Type::FALSE)) {
-      return make_expression<LiteralExpression>(false);
+      return std::make_shared<LiteralExpression>(false);
     }
     if (match(Token::Type::TRUE)) {
-      return make_expression<LiteralExpression>(true);
+      return std::make_shared<LiteralExpression>(true);
     }
     if (match(Token::Type::NIL)) {
-      return make_expression<LiteralExpression>(std::monostate{});
+      return std::make_shared<LiteralExpression>(std::monostate{});
     }
 
     if (match(Token::Type::NUMBER, Token::Type::STRING)) {
-      return make_expression<LiteralExpression>(previous().get_literal());
+      return std::make_shared<LiteralExpression>(previous().get_literal());
     }
 
     if (match(Token::Type::LEFT_PAREN)) {
@@ -80,28 +81,31 @@ private:
       if (!expr.has_value()) {
         return expr;
       }
-      const auto res = consume(Token::Type::RIGHT_PAREN, "Expected ')' after expression.");
+      const auto res =
+          consume(Token::Type::RIGHT_PAREN, "Expected ')' after expression.");
+
       if (res.has_value()) {
-        return make_expression<GroupingExpression>(expr.value());
+        return std::make_shared<GroupingExpression>(expr.value());
       }
+
       return std::unexpected{res.error()};
     }
-    return std::unexpected(ParseError{"Expect expression."});
+    return std::unexpected(error(peek(), "Expect expression."));
   }
 
-  constexpr auto unary() -> std::expected<AnyExpression, ParseError> {
+  auto unary() -> std::expected<std::shared_ptr<Expression>, ParseError> {
     if (match(Token::Type::BANG, Token::Type::MINUS)) {
       auto op = previous();
       auto right = unary();
       if (!right.has_value()) {
         return right;
       }
-      return make_expression<UnaryExpression>(op, right.value());
+      return std::make_shared<UnaryExpression>(op, right.value());
     }
     return primary();
   }
 
-  constexpr auto factor() -> std::expected<AnyExpression, ParseError> {
+  auto factor() -> std::expected<std::shared_ptr<Expression>, ParseError> {
     auto expr = unary();
     if (!expr.has_value()) {
       return expr;
@@ -112,12 +116,13 @@ private:
       if (!right.has_value()) {
         return right;
       }
-      expr = make_expression<BinaryExpression>(expr.value(), opr, right.value());
+      expr =
+          std::make_shared<BinaryExpression>(expr.value(), opr, right.value());
     }
+
     return expr;
   }
-
-  constexpr auto term() -> std::expected<AnyExpression, ParseError> {
+  auto term() -> std::expected<std::shared_ptr<Expression>, ParseError> {
     auto expr = factor();
     if (!expr.has_value()) {
       return expr;
@@ -128,12 +133,13 @@ private:
       if (!right.has_value()) {
         return right;
       }
-      expr = make_expression<BinaryExpression>(expr.value(), opr, right.value());
+      expr =
+          std::make_shared<BinaryExpression>(expr.value(), opr, right.value());
     }
+
     return expr;
   }
-
-  constexpr auto comparison() -> std::expected<AnyExpression, ParseError> {
+  auto comparison() -> std::expected<std::shared_ptr<Expression>, ParseError> {
     auto expr = term();
     if (!expr.has_value()) {
       return expr;
@@ -145,12 +151,13 @@ private:
       if (!right.has_value()) {
         return right;
       }
-      expr = make_expression<BinaryExpression>(expr.value(), opr, right.value());
+      expr =
+          std::make_shared<BinaryExpression>(expr.value(), opr, right.value());
     }
+
     return expr;
   }
-
-  constexpr auto equality() -> std::expected<AnyExpression, ParseError> {
+  auto equality() -> std::expected<std::shared_ptr<Expression>, ParseError> {
     auto expr = comparison();
     if (!expr.has_value()) {
       return expr;
@@ -161,12 +168,32 @@ private:
       if (!right.has_value()) {
         return right;
       }
-      expr = make_expression<BinaryExpression>(expr.value(), opr, right.value());
+      expr =
+          std::make_shared<BinaryExpression>(expr.value(), opr, right.value());
     }
+
     return expr;
   }
-
-  constexpr auto expression() -> std::expected<AnyExpression, ParseError> {
+  auto expression() -> std::expected<std::shared_ptr<Expression>, ParseError> {
     return equality();
+  }
+
+  auto synchronize() {
+    static auto sync_points = std::set<Token::Type>{
+        Token::Type::CLASS, Token::Type::FUN,   Token::Type::VAR,
+        Token::Type::FOR,   Token::Type::IF,    Token::Type::WHILE,
+        Token::Type::PRINT, Token::Type::RETURN};
+
+    advance();
+
+    while (!is_at_end()) {
+      if (previous().get_type() == Token::Type::SEMICOLON) {
+        return;
+      }
+      if (sync_points.contains(peek().get_type())) {
+        return;
+      }
+      advance();
+    }
   }
 };

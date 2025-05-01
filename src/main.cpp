@@ -1,9 +1,5 @@
 #include "lox.hpp"
-#include <iostream>
+#include <cstdlib>
+#include <cstring>
 
-constexpr auto result = Lox::interpret("1 + 2 * 3");
-
-int main() {
-  std::cout << result << '\n';
-  return 0;
-}
+auto main(int argc, char *argv[]) -> int { return Lox::main(argc, argv); }
