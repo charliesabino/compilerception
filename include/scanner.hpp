@@ -12,8 +12,8 @@ private:
   std::string_view filename;
   std::string source;
   std::vector<Token> tokens;
-  uint32_t start{0};   // idx of first char in lexeme being scanned
-  uint32_t current{0}; // idx of current char being considered
+  uint32_t start{0};
+  uint32_t current{0};
   uint32_t line{1};
   bool has_error{false};
 
@@ -37,7 +37,6 @@ private:
 
 public:
   explicit Scanner(std::string &&filename);
-  explicit Scanner(std::string source) : source(std::move(source)) { tokenize(); }
 
   auto scan_tokens() -> std::vector<Token> &;
 

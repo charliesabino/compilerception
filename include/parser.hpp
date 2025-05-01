@@ -11,6 +11,13 @@
 #include <variant>
 #include <vector>
 
+std::vector<BinaryExpression> binary_expressions;
+std::vector<GroupingExpression> grouping_expressions;
+std::vector<LiteralExpression> literal_expressions;
+std::vector<UnaryExpression> unary_expressions;
+
+size_t expression_index = 0;
+
 struct ParseError {
   std::string_view message;
 
@@ -21,9 +28,7 @@ class Parser {
 public:
   explicit Parser(std::vector<Token> tokens) : tokens{std::move(tokens)} {}
 
-  auto parse() -> std::expected<std::shared_ptr<Expression>, ParseError> {
-    return expression();
-  }
+  auto parse() -> Expression & { return expression(); }
 
 private:
   std::vector<Token> tokens;
@@ -52,131 +57,101 @@ private:
     return (... || (check(types) ? (advance(), true) : false));
   }
 
-  auto consume(Token::Type type, std::string_view message)
-      -> std::expected<Token, ParseError> {
-    if (check(type)) {
-      return advance();
-    }
-
-    return std::unexpected(error(peek(), message));
+  auto consume(Token::Type type, std::string_view message) -> Token {
+    return advance();
   }
 
-  auto primary() -> std::expected<std::shared_ptr<Expression>, ParseError> {
+  auto primary() -> Expression & {
     if (match(Token::Type::FALSE)) {
-      return std::make_shared<LiteralExpression>(false);
+      auto &literal_expression =  literal_expressions.emplace_back(false);
+      return literal_expression;
     }
     if (match(Token::Type::TRUE)) {
-      return std::make_shared<LiteralExpression>(true);
+      auto &literal_expression = literal_expressions.emplace_back(true);
+      return literal_expression;
     }
     if (match(Token::Type::NIL)) {
-      return std::make_shared<LiteralExpression>(std::monostate{});
+      auto &literal_expression =
+          literal_expressions.emplace_back(std::monostate{});
+      return literal_expression;
     }
 
     if (match(Token::Type::NUMBER, Token::Type::STRING)) {
-      return std::make_shared<LiteralExpression>(previous().get_literal());
+      auto &literal_expression =
+          literal_expressions.emplace_back(previous().get_literal());
+      return literal_expression;
     }
 
     if (match(Token::Type::LEFT_PAREN)) {
-      auto expr = expression();
-      if (!expr.has_value()) {
-        return expr;
-      }
-      const auto res =
-          consume(Token::Type::RIGHT_PAREN, "Expected ')' after expression.");
+      Expression &expr = expression();
+      consume(Token::Type::RIGHT_PAREN, "Expected ')' after expression.");
 
-      if (res.has_value()) {
-        return std::make_shared<GroupingExpression>(expr.value());
-      }
-
-      return std::unexpected{res.error()};
+      auto &grouping_expression =
+          grouping_expressions.emplace_back(GroupingExpression{expr});
+      return grouping_expression;
     }
-    return std::unexpected(error(peek(), "Expect expression."));
   }
 
-  auto unary() -> std::expected<std::shared_ptr<Expression>, ParseError> {
+  auto unary() -> Expression & {
     if (match(Token::Type::BANG, Token::Type::MINUS)) {
       auto op = previous();
-      auto right = unary();
-      if (!right.has_value()) {
-        return right;
-      }
-      return std::make_shared<UnaryExpression>(op, right.value());
+      Expression &right = unary();
+      auto &unary_expression = unary_expressions.emplace_back(UnaryExpression{op, right});
+      return unary_expression;
     }
     return primary();
   }
 
-  auto factor() -> std::expected<std::shared_ptr<Expression>, ParseError> {
-    auto expr = unary();
-    if (!expr.has_value()) {
-      return expr;
-    }
+  auto factor() -> Expression & {
+    Expression &expr = unary();
     while (match(Token::Type::SLASH, Token::Type::STAR)) {
       auto opr = previous();
-      auto right = unary();
-      if (!right.has_value()) {
-        return right;
-      }
-      expr =
-          std::make_shared<BinaryExpression>(expr.value(), opr, right.value());
+      Expression &right = unary();
+      auto &binary_expression =
+          binary_expressions.emplace_back(BinaryExpression{expr, opr, right});
+      expr = binary_expressions[expression_index++];
     }
 
     return expr;
   }
-  auto term() -> std::expected<std::shared_ptr<Expression>, ParseError> {
-    auto expr = factor();
-    if (!expr.has_value()) {
-      return expr;
-    }
+  auto term() -> Expression & {
+    Expression &expr = factor();
     while (match(Token::Type::PLUS, Token::Type::MINUS)) {
       auto opr = previous();
-      auto right = factor();
-      if (!right.has_value()) {
-        return right;
-      }
-      expr =
-          std::make_shared<BinaryExpression>(expr.value(), opr, right.value());
+      Expression &right = factor();
+      auto &binary_expression =
+          binary_expressions.emplace_back(BinaryExpression{expr, opr, right});
+      expr = binary_expressions[expression_index++];
     }
 
     return expr;
   }
-  auto comparison() -> std::expected<std::shared_ptr<Expression>, ParseError> {
-    auto expr = term();
-    if (!expr.has_value()) {
-      return expr;
-    }
+  auto comparison() -> Expression & {
+    Expression &expr = term();
     while (match(Token::Type::GREATER, Token::Type::GREATER_EQUAL,
                  Token::Type::LESS, Token::Type::LESS_EQUAL)) {
       auto opr = previous();
-      auto right = term();
-      if (!right.has_value()) {
-        return right;
-      }
-      expr =
-          std::make_shared<BinaryExpression>(expr.value(), opr, right.value());
+      Expression &right = term();
+      auto &binary_expression =
+          binary_expressions.emplace_back(BinaryExpression{expr, opr, right});
+      expr = binary_expressions[expression_index++];
     }
 
     return expr;
   }
-  auto equality() -> std::expected<std::shared_ptr<Expression>, ParseError> {
-    auto expr = comparison();
-    if (!expr.has_value()) {
-      return expr;
-    }
+  auto equality() -> Expression & {
+    Expression &expr = comparison();
     while (match(Token::Type::BANG_EQUAL, Token::Type::EQUAL_EQUAL)) {
       auto opr = previous();
-      auto right = comparison();
-      if (!right.has_value()) {
-        return right;
-      }
-      expr =
-          std::make_shared<BinaryExpression>(expr.value(), opr, right.value());
+      Expression &right = comparison();
+      auto &binary_expression =
+          binary_expressions.emplace_back(BinaryExpression{expr, opr, right});
+      expr = binary_expressions[expression_index++];
     }
 
     return expr;
   }
-  auto expression() -> std::expected<std::shared_ptr<Expression>, ParseError> {
-    return equality();
-  }
+  auto expression() -> Expression & { return equality(); }
 
   auto synchronize() {
     static auto sync_points = std::set<Token::Type>{

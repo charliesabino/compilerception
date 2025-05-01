@@ -33,22 +33,22 @@ int Lox::main(int /*argc*/, char *argv[]) {
   // }
 
   if (command == "tokenize") {
-    for (auto &token : tokens) {
-      std::cout << token.to_string() << '\n';
-    }
+    // for (auto &token : tokens) {
+    //   std::cout << token.to_string() << '\n';
+    // }
     if (had_error) {
       return 65; // Lox convention: syntax‑error exit code
     }
   } else if (command == "parse") {
     Parser parser{tokens};
-    auto expression = parser.parse();
+    Expression &expression = parser.parse();
 
     if (had_error) {
       return 65; // Lox convention: syntax‑error exit code
     }
 
-    ASTPrinter printer{};
-    printer.print(*(expression.value()));
+    // ASTPrinter printer{};
+    // printer.print(*(expression.value()));
   } else {
     return -1;
   }
