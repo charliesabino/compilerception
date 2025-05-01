@@ -15,8 +15,8 @@ using TokenLiteral =
 class Token {
 public:
   enum class Type : uint8_t {
-    // Single-character tokens.
-    LEFT_PAREN,
+    // Single-character tokens. LEFT_PAREN,
+    LEFT_PAREN = 0,
     RIGHT_PAREN,
     LEFT_BRACE,
     RIGHT_BRACE,
@@ -83,4 +83,17 @@ private:
   Type type;
   std::optional<TokenLiteral> literal;
   uint32_t line;
+};
+
+auto token_literal_to_string(TokenLiteral literal) -> std::string;
+
+static constexpr std::array type_to_str{
+    "LEFT_PAREN", "RIGHT_PAREN",   "LEFT_BRACE", "RIGHT_BRACE", "COMMA",
+    "DOT",        "MINUS",         "PLUS",       "SEMICOLON",   "SLASH",
+    "STAR",       "BANG",          "BANG_EQUAL", "EQUAL",       "EQUAL_EQUAL",
+    "GREATER",    "GREATER_EQUAL", "LESS",       "LESS_EQUAL",  "IDENTIFIER",
+    "STRING",     "NUMBER",        "AND",        "CLASS",       "ELSE",
+    "FALSE",      "FUN",           "FOR",        "IF",          "NIL",
+    "OR",         "PRINT",         "RETURN",     "SUPER",       "THIS",
+    "TRUE",       "WHILE",         "VAR",        "EOF",
 };

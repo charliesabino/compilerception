@@ -37,6 +37,7 @@ private:
 
 public:
   explicit Scanner(std::string &&filename);
+  explicit Scanner(std::string source) : source(std::move(source)) { tokenize(); }
 
   auto scan_tokens() -> std::vector<Token> &;
 

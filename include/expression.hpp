@@ -3,20 +3,24 @@
 #include <memory>
 #include <string>
 
-using Expression = std::variant<BinaryExpression, GroupingExpression, LiteralExpression, UnaryExpression>;
-
 class ExpressionVisitor;
 
-struct BinaryExpression {
-  Expression left;
+struct Expression {
+  virtual ~Expression() = default;
+  virtual auto accept(const ExpressionVisitor &visitor) const
+      -> std::string = 0;
+};
+
+struct BinaryExpression : public Expression {
+  std::shared_ptr<Expression> left;
   Token op;
-  Expression right;
+  std::shared_ptr<Expression> right;
 
   BinaryExpression(std::shared_ptr<Expression> left, Token op,
                    std::shared_ptr<Expression> right)
       : left(std::move(left)), op(op), right(std::move(right)) {}
 
-  auto accept(const ExpressionVisitor &visitor) const -> std::string ;
+  auto accept(const ExpressionVisitor &visitor) const -> std::string override;
 };
 
 struct GroupingExpression : public Expression {
@@ -24,7 +28,7 @@ struct GroupingExpression : public Expression {
 
   explicit GroupingExpression(std::shared_ptr<Expression> expression)
       : expression(std::move(expression)) {}
-  auto accept(const ExpressionVisitor &visitor) const -> std::string;
+  auto accept(const ExpressionVisitor &visitor) const -> std::string override;
 };
 
 struct LiteralExpression : public Expression {
@@ -32,14 +36,24 @@ struct LiteralExpression : public Expression {
 
   explicit LiteralExpression(TokenLiteral literal) : literal(literal) {}
 
-  auto accept(const ExpressionVisitor &visitor) const -> std::string;
+  auto accept(const ExpressionVisitor &visitor) const -> std::string override;
 };
 
-struct UnaryExpression {
+struct UnaryExpression : public Expression {
   Token op;
-  Expression right;
+  std::shared_ptr<Expression> right;
 
-  UnaryExpression(Token op, Expression right) : op(op), right(right) {}
+  UnaryExpression(Token op, std::shared_ptr<Expression> right)
+      : op(op), right(std::move(right)) {}
 
-  auto accept(const ExpressionVisitor &visitor) const -> std::string;
+  auto accept(const ExpressionVisitor &visitor) const -> std::string override;
+};
+
+class ExpressionVisitor {
+public:
+  virtual ~ExpressionVisitor() = default;
+  virtual auto visit(const BinaryExpression &expr) const -> std::string = 0;
+  virtual auto visit(const GroupingExpression &expr) const -> std::string = 0;
+  virtual auto visit(const LiteralExpression &expr) const -> std::string = 0;
+  virtual auto visit(const UnaryExpression &expr) const -> std::string = 0;
 };
